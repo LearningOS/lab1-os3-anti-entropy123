@@ -16,10 +16,10 @@ struct KernelStack {
 }
 
 #[repr(align(4096))]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 /// user stack structure
-struct UserStack {
-    data: [u8; USER_STACK_SIZE],
+pub struct UserStack {
+   pub data: [u8; USER_STACK_SIZE],
 }
 
 /// kernel stack instance
@@ -28,7 +28,7 @@ static KERNEL_STACK: [KernelStack; MAX_APP_NUM] = [KernelStack {
 }; MAX_APP_NUM];
 
 /// user stack instance
-static USER_STACK: [UserStack; MAX_APP_NUM] = [UserStack {
+pub static USER_STACK: [UserStack; MAX_APP_NUM] = [UserStack {
     data: [0; USER_STACK_SIZE],
 }; MAX_APP_NUM];
 

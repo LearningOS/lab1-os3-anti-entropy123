@@ -14,8 +14,8 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 
-use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
-use crate::loader::{get_num_app, init_app_cx};
+use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM, USER_STACK_SIZE};
+use crate::loader::{get_num_app, init_app_cx, UserStack, USER_STACK};
 use crate::sync::UPSafeCell;
 use lazy_static::*;
 pub use switch::__switch;
@@ -125,8 +125,11 @@ impl TaskManager {
             inner.current_task = next;
             let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
             let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
-            drop(inner);
             // before this, we should drop local variables that must be dropped manually
+            log::debug!("next app is {}", next);
+            log::debug!("current user stack: {:x?}", &USER_STACK[next].data[USER_STACK_SIZE-50..USER_STACK_SIZE]);
+            log::debug!("current user task_context: {:x?}", inner.tasks[next].task_cx);
+            drop(inner);
             unsafe {
                 __switch(current_task_cx_ptr, next_task_cx_ptr);
             }

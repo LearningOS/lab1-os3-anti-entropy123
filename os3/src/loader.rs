@@ -78,8 +78,9 @@ pub fn load_apps() {
 }
 
 pub fn init_app_cx(app_id: usize) -> usize {
-    KERNEL_STACK[app_id].push_context(TrapContext::app_init_context(
-        get_base_i(app_id),
-        USER_STACK[app_id].get_sp(),
-    ))
+    let app_context =
+        TrapContext::app_init_context(get_base_i(app_id), USER_STACK[app_id].get_sp());
+    
+    log::info!("app_ctx={}", app_context);
+    KERNEL_STACK[app_id].push_context(app_context)
 }

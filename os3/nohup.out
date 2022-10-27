@@ -1,0 +1,118 @@
+Makefile:35: 警告：覆盖关于目标“target/riscv64gc-unknown-none-elf/release/os.bin”的配方
+Makefile:27: 警告：忽略关于目标“target/riscv64gc-unknown-none-elf/release/os.bin”的旧配方
+(rustup target list | grep "riscv64gc-unknown-none-elf (installed)") || rustup target add riscv64gc-unknown-none-elf
+riscv64gc-unknown-none-elf (installed)
+cargo install cargo-binutils
+    Updating crates.io index
+     Ignored package `cargo-binutils v0.3.6` is already installed, use --force to override
+make[1]: 进入目录“/home/yjn/rust_project/lab1-os3-anti-entropy123/user”
+target/riscv64gc-unknown-none-elf/release/ch2b_power_3 target/riscv64gc-unknown-none-elf/release/ch2b_bad_instructions target/riscv64gc-unknown-none-elf/release/ch2b_power_5 target/riscv64gc-unknown-none-elf/release/ch2b_power_7 target/riscv64gc-unknown-none-elf/release/ch2b_bad_register target/riscv64gc-unknown-none-elf/release/ch2b_hello_world target/riscv64gc-unknown-none-elf/release/ch2b_bad_address target/riscv64gc-unknown-none-elf/release/ch3b_sleep target/riscv64gc-unknown-none-elf/release/ch3b_yield2 target/riscv64gc-unknown-none-elf/release/ch3b_sleep1 target/riscv64gc-unknown-none-elf/release/ch3b_yield0 target/riscv64gc-unknown-none-elf/release/ch3b_yield1
+   Compiling scopeguard v1.1.0
+   Compiling spin v0.7.1
+   Compiling spin v0.5.2
+   Compiling bitflags v1.3.2
+   Compiling lock_api v0.4.6
+   Compiling lazy_static v1.4.0
+   Compiling buddy_system_allocator v0.6.0
+   Compiling spin v0.9.4
+   Compiling user_lib v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/user)
+    Finished release [optimized] target(s) in 1.15s
+   Compiling user_lib v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/user)
+    Finished release [optimized] target(s) in 0.33s
+   Compiling user_lib v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/user)
+    Finished release [optimized] target(s) in 0.33s
+   Compiling user_lib v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/user)
+    Finished release [optimized] target(s) in 0.33s
+   Compiling user_lib v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/user)
+    Finished release [optimized] target(s) in 0.33s
+   Compiling user_lib v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/user)
+    Finished release [optimized] target(s) in 0.33s
+   Compiling user_lib v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/user)
+    Finished release [optimized] target(s) in 0.35s
+   Compiling user_lib v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/user)
+    Finished release [optimized] target(s) in 0.32s
+   Compiling user_lib v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/user)
+    Finished release [optimized] target(s) in 0.33s
+   Compiling user_lib v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/user)
+    Finished release [optimized] target(s) in 0.33s
+   Compiling user_lib v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/user)
+    Finished release [optimized] target(s) in 0.33s
+   Compiling user_lib v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/user)
+    Finished release [optimized] target(s) in 0.32s
+[build.py] application ch2b_bad_address start with address 0x80400000
+[build.py] application ch2b_bad_instructions start with address 0x80420000
+[build.py] application ch2b_bad_register start with address 0x80440000
+[build.py] application ch2b_hello_world start with address 0x80460000
+[build.py] application ch2b_power_3 start with address 0x80480000
+[build.py] application ch2b_power_5 start with address 0x804a0000
+[build.py] application ch2b_power_7 start with address 0x804c0000
+[build.py] application ch3b_sleep start with address 0x804e0000
+[build.py] application ch3b_sleep1 start with address 0x80500000
+[build.py] application ch3b_yield0 start with address 0x80520000
+[build.py] application ch3b_yield1 start with address 0x80540000
+[build.py] application ch3b_yield2 start with address 0x80560000
+make[1]: 离开目录“/home/yjn/rust_project/lab1-os3-anti-entropy123/user”
+   Compiling os v0.1.0 (/home/yjn/rust_project/lab1-os3-anti-entropy123/os3)
+warning: unused `#[macro_use]` import
+ --> src/main.rs:6:1
+  |
+6 | #[macro_use]
+  | ^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `trap::TrapContext`
+ --> src/task/mod.rs:2:34
+  |
+2 | use crate::{loader::init_app_cx, trap::TrapContext};
+  |                                  ^^^^^^^^^^^^^^^^^
+
+warning: unreachable statement
+  --> src/main.rs:52:5
+   |
+51 |     task::run_next_task();
+   |     --------------------- any code following this expression is unreachable
+52 |     panic!("Unreachable in rust_main!");
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ unreachable statement
+   |
+   = note: `#[warn(unreachable_code)]` on by default
+   = note: this warning originates in the macro `panic` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: constant `trap_S` is never used
+  --> src/main.rs:11:7
+   |
+11 | const trap_S: &'static str = include_str!("./trap/trap.S");
+   |       ^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: constant `MAX_SYSCALL_NUM` is never used
+ --> src/config.rs:8:11
+  |
+8 | pub const MAX_SYSCALL_NUM: usize = 500;
+  |           ^^^^^^^^^^^^^^^
+
+warning: constant `MICRO_PER_SEC` is never used
+ --> src/timer.rs:6:7
+  |
+6 | const MICRO_PER_SEC: usize = 1_000_000;
+  |       ^^^^^^^^^^^^^
+
+warning: function `get_time_us` is never used
+  --> src/timer.rs:12:8
+   |
+12 | pub fn get_time_us() -> usize {
+   |        ^^^^^^^^^^^
+
+warning: constant `trap_S` should have an upper case name
+  --> src/main.rs:11:7
+   |
+11 | const trap_S: &'static str = include_str!("./trap/trap.S");
+   |       ^^^^^^ help: convert the identifier to upper case: `TRAP_S`
+   |
+   = note: `#[warn(non_upper_case_globals)]` on by default
+
+warning: `os` (bin "os") generated 8 warnings
+    Finished release [unoptimized + debuginfo] target(s) in 0.20s
+qemu-system-riscv64 -machine virt -nographic -bios ../bootloader/rustsbi-qemu.bin -device loader,file=target/riscv64gc-unknown-none-elf/release/os.bin,addr=0x80200000 -s -S
+qemu-system-riscv64: terminating on signal 1 from pid 268941 (-zsh)

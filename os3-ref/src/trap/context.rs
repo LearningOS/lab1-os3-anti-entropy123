@@ -2,6 +2,7 @@
 
 use riscv::register::sstatus::{self, Sstatus, SPP};
 
+#[derive(Debug)]
 #[repr(C)]
 /// trap context structure containing sstatus, sepc and registers
 pub struct TrapContext {
@@ -23,6 +24,7 @@ impl TrapContext {
             sepc: entry,
         };
         cx.set_sp(sp);
+        log::info!("app_context: {:x?}", cx);
         cx
     }
 }
