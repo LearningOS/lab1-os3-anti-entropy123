@@ -7,7 +7,7 @@ use riscv::register::{
     utvec::TrapMode,
 };
 
-use crate::task::run_next_task;
+use crate::{task::run_next_task, syscall};
 
 core::arch::global_asm!(include_str!("trap.S"));
 extern "C" {
@@ -42,6 +42,7 @@ impl TrapContext {
         ctx
     }
 }
+
 impl Display for TrapContext {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!(
@@ -53,9 +54,26 @@ impl Display for TrapContext {
     }
 }
 
+impl TrapContext {
+    pub fn a_n(&self, n: usize) -> usize {
+        self.x[10 + n]
+    }
+
+    pub fn set_a_n(&mut self, n: usize, v: usize) {
+        self.x[10 + n] = v
+    }
+}
+
 // 在其它 crate 里调 __restore 好像会报链接错误, 所以要包装一层.
 pub fn restore(ctx: usize) -> ! {
     unsafe { __restore(ctx) }
+}
+
+pub fn restore_from_trapctx(ctx: &TrapContext) -> ! {
+    let ctx_addr = ctx as *const TrapContext as usize;
+    log::debug!("try to get ctx addr by raw pointer, ctx_addr=0x{:x}", ctx_addr);
+    log::debug!("restore_from_trapctx, ctx={}", ctx);
+    restore(ctx_addr)
 }
 
 pub fn init() {
@@ -68,7 +86,7 @@ pub fn trap_handler(ctx: &mut TrapContext) -> ! {
     log::debug!("user trap context is {}", ctx);
     let scause = scause::read();
     let stval = stval::read();
-    
+
     log::info!(
         "scause={:#?}, stval={:?}, sepc=0x{:x?}",
         scause.cause(),
@@ -78,17 +96,20 @@ pub fn trap_handler(ctx: &mut TrapContext) -> ! {
 
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
-            log::info!("UserEnvCall, syscall");
-            unimplemented!();
+            syscall::syscall_handler(ctx);
+            ctx.sepc += 4;
+            restore_from_trapctx(ctx)
         }
         Trap::Exception(Exception::LoadFault) => {
+            log::error!("load fault, core dump");
             run_next_task();
-            // panic!("LoadFault (bad address?)")
         }
         Trap::Exception(Exception::StoreFault) => {
+            log::error!("store fault, core dump");
             run_next_task();
         }
         Trap::Exception(Exception::IllegalInstruction) => {
+            log::error!("illegal instruction, core dump");
             run_next_task();
         }
         _ => {

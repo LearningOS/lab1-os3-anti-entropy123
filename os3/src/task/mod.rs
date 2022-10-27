@@ -1,5 +1,5 @@
 use super::trap::restore;
-use crate::{loader::init_app_cx, trap::TrapContext};
+use crate::loader::init_app_cx;
 use lazy_static::lazy_static;
 use spin::Mutex;
 
@@ -14,15 +14,13 @@ lazy_static! {
 pub fn run_next_task() -> ! {
     let mut task_manager = TM.lock();
     let app_id = task_manager.current_task;
-    if app_id > 3 {
-        unimplemented!("only support app 1~3");
-    }
+
     log::info!("will run next task, task_idx={}", app_id);
-    
+
     task_manager.current_task += 1;
     drop(task_manager);
 
     let ctx_addr = init_app_cx(app_id);
-    log::info!("app_{} ctx_addr=0x{:x}", app_id, ctx_addr );
+    log::info!("app_{} ctx_addr=0x{:x}", app_id, ctx_addr);
     restore(ctx_addr)
 }
