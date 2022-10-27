@@ -1,5 +1,6 @@
-use crate::config::*;
+use crate::task::Task;
 use crate::trap::TrapContext;
+use crate::{config::*, task};
 
 #[repr(align(4096))]
 #[derive(Copy, Clone)]
@@ -25,12 +26,12 @@ impl KernelStack {
     fn get_sp(&self) -> usize {
         self.data.as_ptr() as usize + KERNEL_STACK_SIZE
     }
-    pub fn push_context(&self, trap_cx: TrapContext) -> usize {
-        let trap_cx_ptr = (self.get_sp() - core::mem::size_of::<TrapContext>()) as *mut TrapContext;
+    pub fn push_context(&self, task_cx: Task) -> usize {
+        let task_cx_ptr = (self.get_sp() - core::mem::size_of::<Task>()) as *mut Task;
         unsafe {
-            *trap_cx_ptr = trap_cx;
+            *task_cx_ptr = task_cx;
         }
-        trap_cx_ptr as usize
+        task_cx_ptr as usize
     }
 }
 
@@ -40,7 +41,7 @@ impl UserStack {
     }
 }
 
-fn get_base_i(app_id: usize) -> usize {
+pub fn get_base_i(app_id: usize) -> usize {
     APP_BASE_ADDRESS + app_id * APP_SIZE_LIMIT
 }
 
@@ -77,10 +78,11 @@ pub fn load_apps() {
     }
 }
 
-pub fn init_app_cx(app_id: usize) -> usize {
-    let app_context =
-        TrapContext::app_init_context(get_base_i(app_id), USER_STACK[app_id].get_sp());
-    
-    log::info!("app_ctx={}", app_context);
-    KERNEL_STACK[app_id].push_context(app_context)
+pub fn get_app_sp(app_id: usize) -> usize {
+    USER_STACK[app_id].get_sp()
+}
+
+pub fn init_task_cx(ctx: Task) -> usize {
+    log::info!("app_ctx={}", ctx.trap_ctx);
+    KERNEL_STACK[ctx.id].push_context(ctx)
 }
