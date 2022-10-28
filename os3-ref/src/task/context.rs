@@ -1,6 +1,6 @@
 //! Implementation of [`TaskContext`]
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[repr(C)]
 /// task context structure containing some registers
 pub struct TaskContext {

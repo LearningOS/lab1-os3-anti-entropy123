@@ -9,6 +9,8 @@ extern crate user_lib;
 
 #[no_mangle]
 fn main() -> i32 {
-    println!("Hello, world from user mode program!");
+    println!("Hello, world 1 from user mode program!");
+    println!("Hello, world 2 from user mode program!");
+    println!("Hello, world 3 from user mode program!");
     0
 }
