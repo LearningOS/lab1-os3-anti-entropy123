@@ -1,25 +1,29 @@
 use crate::{
+    config::MAX_SYSCALL_NUM,
     task::{run_next_task, Task, TaskState},
-    timer::{get_time, get_time_us},
+    timer::{self, get_time, get_time_ms, get_time_us, TimeVal},
     trap::TrapContext,
 };
 const STDOUT: usize = 1;
 
+#[derive(Debug)]
 enum Syscall {
     Exit,
     Write,
     GetTimeOfDay,
-    YIELD,
+    Yield,
+    TaskInfo,
 }
 
 impl From<usize> for Syscall {
     fn from(n: usize) -> Self {
         match n {
-            93 => Self::Exit,          // 0x5d
             64 => Self::Write,         // 0x40
+            93 => Self::Exit,          // 0x5d
+            124 => Self::Yield,        // 0x7c
             169 => Self::GetTimeOfDay, // 0xa9
-            124 => Self::YIELD,        // 0x7c
-            _ => todo!(),
+            410 => Self::TaskInfo,
+            _ => todo!("unsupported syscall"),
         }
     }
 }
@@ -28,25 +32,37 @@ impl Syscall {
     fn handle(&self, task: &mut Task, arg1: usize, arg2: usize, arg3: usize) {
         let ret = match self {
             Syscall::Write => sys_write(arg1, arg2, arg3),
-            Syscall::Exit => {task.state = TaskState::Exited; run_next_task()},
+            Syscall::Exit => sys_exit(task),
             Syscall::GetTimeOfDay => sys_gettimeofday(arg1, arg2) as usize,
-            Syscall::YIELD => sys_yield(),
-            _ => todo!(),
+            Syscall::Yield => sys_yield(),
+            Syscall::TaskInfo => sys_taskinfo(&task, arg1),
+            _ => todo!("unsupported syscall handle function"),
         };
-        task.trap_ctx.set_a_n(10, ret);
+        task.trap_ctx.set_reg_a(0, ret);
+        log::info!(
+            "syscall ret={}, task.trap_ctx.x[10]={}",
+            ret,
+            task.trap_ctx.reg_a(0)
+        );
     }
 }
 
 pub fn syscall_handler(ctx: &mut Task) {
     let trap_ctx = &mut ctx.trap_ctx;
     let (syscall_num, a0, a1, a2) = (
-        trap_ctx.a_n(7),
-        trap_ctx.a_n(0),
-        trap_ctx.a_n(1),
-        trap_ctx.a_n(2),
+        trap_ctx.reg_a(7),
+        trap_ctx.reg_a(0),
+        trap_ctx.reg_a(1),
+        trap_ctx.reg_a(2),
     );
-    log::info!("syscall_num is {}", syscall_num);
+    ctx.syscall_times[syscall_num] += 1;
     let syscall = Syscall::from(syscall_num);
+    log::info!(
+        "syscall_handler, num={}, name={:?}, syscall_times={:?}",
+        syscall_num,
+        syscall,
+        ctx.syscall_times
+    );
     syscall.handle(ctx, a0, a1, a2)
 }
 
@@ -67,17 +83,9 @@ fn sys_write(fd: usize, buf: usize, len: usize) -> usize {
     len
 }
 
-#[repr(C)]
-#[derive(Debug, Default)]
-pub struct TimeVal {
-    pub sec: usize,
-    pub usec: usize,
-}
-
 fn sys_gettimeofday(timeval_ptr: usize, _tz: usize) -> isize {
     let time = unsafe { &mut *(timeval_ptr as *mut TimeVal) };
-    time.sec = get_time();
-    time.usec = get_time_us();
+    timer::set_time_val(time);
     0
 }
 
@@ -85,6 +93,25 @@ fn sys_yield() -> usize {
     return 0;
 }
 
-fn sys_exit() -> usize {
+pub fn sys_exit(task: &mut Task) -> ! {
+    task.set_state(TaskState::Exited);
     run_next_task()
+}
+
+#[derive(Debug)]
+pub struct TaskInfo {
+    pub state: TaskState,
+    pub syscall_times: [u32; MAX_SYSCALL_NUM],
+    pub exec_time: usize,
+}
+
+fn sys_taskinfo(task: &Task, user_info: usize) -> usize {
+    let taskinfo = unsafe { &mut *(user_info as *mut TaskInfo) };
+    *taskinfo = TaskInfo {
+        state: task.state(),
+        syscall_times: task.syscall_times,
+        exec_time: get_time_ms() - task.start_time_ms,
+    };
+    log::debug!("sys_taskinfo, copyout user_info={:?}", taskinfo);
+    0
 }

@@ -2,7 +2,9 @@ use core::panic;
 
 use super::trap::restore;
 use crate::{
+    config::MAX_SYSCALL_NUM,
     loader::{get_num_app, init_task_cx},
+    timer::{get_time, get_time_ms},
     trap::TrapContext,
 };
 use lazy_static::lazy_static;
@@ -10,7 +12,7 @@ use spin::Mutex;
 
 const MAX_APP_NUM: usize = 16;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum TaskState {
     UnInit,
     Ready,
@@ -18,11 +20,20 @@ pub enum TaskState {
     Exited,
 }
 
+// #[derive(Clone, Debug)]
+// pub struct TaskInfo {
+//     pub state: TaskState,
+//     pub syscall_times: [u32; MAX_SYSCALL_NUM],
+//     pub exec_time: usize,
+// }
+
 #[repr(C)]
 pub struct Task {
     pub trap_ctx: TrapContext,
     pub id: usize,
-    pub state: TaskState,
+    state: TaskState,
+    pub start_time_ms: usize,
+    pub syscall_times: [u32; MAX_SYSCALL_NUM],
 }
 
 impl Task {
@@ -30,12 +41,22 @@ impl Task {
         Self {
             trap_ctx: TrapContext::app_init_context(app_id),
             id: app_id,
-            state: TaskState::Ready,
+            state: TaskState::UnInit,
+            syscall_times: [0; MAX_SYSCALL_NUM],
+            start_time_ms: 0,
         }
     }
 
     pub fn get_ptr(&self) -> usize {
         self as *const _ as usize
+    }
+
+    pub fn state(&self) -> TaskState {
+        self.state
+    }
+
+    pub fn set_state(&mut self, state: TaskState) {
+        self.state = state
     }
 }
 
@@ -57,23 +78,26 @@ impl TaskManager {
         }
     }
 
-    fn get_task_ref(&self, app_id: usize) -> Option<&Task> {
-        self.task_list[app_id].map(|ptr| unsafe { &*(ptr as *mut Task) })
-    }
+    // fn get_task_ref(&self, app_id: usize) -> Option<&Task> {
+    //     self.task_list[app_id].map(|ptr| unsafe { &*(ptr as *mut Task) })
+    // }
 
     fn get_task_mut_ref(&self, app_id: usize) -> Option<&mut Task> {
         self.task_list[app_id].map(|ptr| unsafe { &mut *(ptr as *mut Task) })
     }
 
-    fn find_next_ready_task(&self) -> Option<&Task> {
+    fn find_next_ready_task(&self) -> Option<&mut Task> {
         let current = self.next_task;
         for i in current..(current + MAX_APP_NUM) {
             let app_id = i % MAX_APP_NUM;
-            let task = self.get_task_mut_ref(app_id);
-            if task.is_none() {
-                continue;
+            let task = match self.get_task_mut_ref(app_id) {
+                None => continue,
+                Some(task) => task,
+            };
+            if task.state == TaskState::UnInit {
+                task.state = TaskState::Ready;
+                task.start_time_ms = get_time_ms();
             }
-            let mut task = task.unwrap();
             if task.state == TaskState::Ready {
                 task.state = TaskState::Running;
                 return Some(task);
@@ -89,16 +113,15 @@ lazy_static! {
 
 pub fn run_next_task() -> ! {
     let mut task_manager = TM.lock();
-    let task = task_manager.find_next_ready_task();
-    if task.is_none() {
-        panic!("all task complete!");
-    }
-    let task = task.unwrap();
+    let task = match task_manager.find_next_ready_task() {
+        None => panic!("all task complete!"),
+        Some(task) => task,
+    };
+    let cur_task_id = task.id;
     let ctx_ptr = task.get_ptr();
-    log::info!("will run next task, task_idx={}", task.id);
-    log::debug!("app_{} ctx_addr=0x{:x}", task.id, ctx_ptr);
     task_manager.next_task = task.id + 1;
     drop(task_manager);
-
+    log::info!("will run next task, task_idx={}", cur_task_id);
+    log::debug!("app_{} ctx_addr=0x{:x}", cur_task_id, ctx_ptr);
     restore(ctx_ptr)
 }

@@ -1,6 +1,6 @@
 use crate::{
     loader::{get_app_sp, get_base_i},
-    syscall,
+    syscall::{self, sys_exit},
     task::{run_next_task, Task, TaskState},
     timer::set_next_trigger,
 };
@@ -46,11 +46,11 @@ impl TrapContext {
         ctx
     }
 
-    pub fn a_n(&self, n: usize) -> usize {
+    pub fn reg_a(&self, n: usize) -> usize {
         self.x[10 + n]
     }
 
-    pub fn set_a_n(&mut self, n: usize, v: usize) {
+    pub fn set_reg_a(&mut self, n: usize, v: usize) {
         self.x[10 + n] = v
     }
 }
@@ -68,17 +68,11 @@ impl Display for TrapContext {
 
 // 在其它 crate 里调 __restore 好像会报链接错误, 所以要包装一层.
 pub fn restore(ctx: usize) -> ! {
+    log::debug!("try to get ctx addr by raw pointer, ctx_addr=0x{:x}", ctx);
+    log::debug!("restore_from_trapctx, ctx={}", unsafe {
+        &*(ctx as *const TrapContext)
+    });
     unsafe { __restore(ctx) }
-}
-
-pub fn restore_from_taskctx(ctx: &Task) -> ! {
-    let ctx_addr = ctx.get_ptr();
-    log::debug!(
-        "try to get ctx addr by raw pointer, ctx_addr=0x{:x}",
-        ctx_addr
-    );
-    log::debug!("restore_from_trapctx, ctx={}", ctx.trap_ctx);
-    restore(ctx_addr)
 }
 
 pub fn init() {
@@ -88,9 +82,12 @@ pub fn init() {
 
 #[no_mangle]
 pub fn trap_handler(ctx: &mut Task) -> ! {
-    ctx.state = TaskState::Ready;
     let trap_ctx = &mut ctx.trap_ctx;
-    log::debug!("user trap context is {}", trap_ctx);
+    log::debug!(
+        "trap_handler, task.id={}, task.trap_ctx={}",
+        ctx.id,
+        trap_ctx
+    );
     let scause = scause::read();
     let stval = stval::read();
 
@@ -100,26 +97,25 @@ pub fn trap_handler(ctx: &mut Task) -> ! {
         Trap::Exception(Exception::UserEnvCall) => {
             trap_ctx.sepc += 4;
             syscall::syscall_handler(ctx);
+            ctx.set_state(TaskState::Ready);
             run_next_task();
         }
         Trap::Exception(Exception::LoadFault) => {
             log::error!("load fault, core dump");
-            ctx.state = TaskState::Exited;
-            run_next_task();
+            sys_exit(ctx);
         }
         Trap::Exception(Exception::StoreFault) => {
             log::error!("store fault, core dump");
-            ctx.state = TaskState::Exited;
-            run_next_task();
+            sys_exit(ctx);
         }
         Trap::Exception(Exception::IllegalInstruction) => {
             log::error!("illegal instruction, core dump");
-            ctx.state = TaskState::Exited;
-            run_next_task();
+            sys_exit(ctx);
         }
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
             log::info!("Timer interrupt.");
             set_next_trigger();
+            ctx.set_state(TaskState::Ready);
             run_next_task();
         }
         _ => {
